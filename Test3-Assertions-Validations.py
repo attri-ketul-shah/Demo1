@@ -5,7 +5,7 @@ from playwright.sync_api import Page, expect
 
 # Read credentials from TXT file
 CREDENTIAL_FILE = Path(
-    r"D:\GitHub-Learning\Demo1\credentials.txt"
+    r"D:\GitHub-Learning\Demo1\credentials.txt.txt"
 )
 
 with open(CREDENTIAL_FILE, "r") as file:
