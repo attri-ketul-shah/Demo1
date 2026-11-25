@@ -1,101 +1,187 @@
 
 import re
-import pytest
-from playwright.async_api import async_playwright, expect
+from playwright.sync_api import sync_playwright, expect
 
 
 BASE_URL = "https://www.saucedemo.com/"
 
 
-@pytest.mark.asyncio
-async def test_valid_login_and_logout():
+def test_successful_login():
 
-    async with async_playwright() as playwright:
+    with sync_playwright() as playwright:
 
-        browser = await playwright.chromium.launch(headless=False)
-        page = await browser.new_page()
+        browser = playwright.chromium.launch(headless=False)
+        page = browser.new_page()
 
-        # Open website
-        await page.goto(BASE_URL)
+        try:
+            # 1. Open SauceDemo website
+            page.goto(BASE_URL)
 
-        # Login
-        await page.get_by_placeholder("Username").fill("standard_user")
-        await page.get_by_placeholder("Password").fill("secret_sauce")
-        await page.get_by_role("button", name="Login").click()
+            # 2. Enter valid username and password
+            page.get_by_placeholder("Username").fill("standard_user")
+            page.get_by_placeholder("Password").fill("secret_sauce")
+            page.wait_for_timeout(3000)
+            # 3. Click Login button
+            page.get_by_role("button", name="Login").click()
 
-        # Verify successful login
-        await expect(page).to_have_url(re.compile(r"inventory\.html"))
-        await expect(page.locator(".title")).to_have_text("Products")
+            # 4. Verify successful login
+            expect(page).to_have_url(re.compile("inventory.html"))
+            expect(page.locator(".title")).to_have_text("Products")
+            page.wait_for_timeout(3000)
+            print("PASS: Successful login")
 
-        # Open menu
-        await page.locator("#react-burger-menu-btn").click()
-
-        # Verify logout link
-        logout_link = page.locator("#logout_sidebar_link")
-        await expect(logout_link).to_be_visible()
-
-        # Logout
-        await logout_link.click()
-
-        # Verify successful logout
-        await expect(page).to_have_url(BASE_URL)
-        await expect(
-            page.get_by_placeholder("Username")
-        ).to_be_visible()
-
-        await browser.close()
+        finally:
+            browser.close()
 
 
-@pytest.mark.asyncio
-async def test_invalid_login_displays_error():
+def test_invalid_login():
 
-    async with async_playwright() as playwright:
+    with sync_playwright() as playwright:
 
-        browser = await playwright.chromium.launch(headless=False)
-        page = await browser.new_page()
+        browser = playwright.chromium.launch(headless=False)
+        page = browser.new_page()
 
-        # Open website
-        await page.goto(BASE_URL)
+        try:
+            # Open website
+            page.goto(BASE_URL)
 
-        # Enter invalid credentials
-        await page.get_by_placeholder("Username").fill("wrong_user")
-        await page.get_by_placeholder("Password").fill("wrong_password")
+            # Enter invalid credentials
+            page.get_by_placeholder("Username").fill("wrong_user")
+            page.get_by_placeholder("Password").fill("wrong_password")
+            page.wait_for_timeout(3000)
+            # Click Login
+            page.get_by_role("button", name="Login").click()
 
-        # Click login
-        await page.get_by_role("button", name="Login").click()
+            # Verify error message
+            error = page.locator('[data-test="error"]')
 
-        # Verify error message
-        error_message = page.locator('[data-test="error"]')
+            expect(error).to_contain_text(
+                "Username and password do not match"
+            )
 
-        await expect(error_message).to_contain_text(
-            "Username and password do not match"
-        )
+            print("PASS: Invalid login validation")
 
-        await browser.close()
+        finally:
+            browser.close()
 
 
-@pytest.mark.asyncio
-async def test_empty_username_displays_validation_error():
+def test_empty_username():
 
-    async with async_playwright() as playwright:
+    with sync_playwright() as playwright:
 
-        browser = await playwright.chromium.launch(headless=False)
-        page = await browser.new_page()
+        browser = playwright.chromium.launch(headless=False)
+        page = browser.new_page()
 
-        # Open website
-        await page.goto(BASE_URL)
+        try:
+            # Open website
+            page.goto(BASE_URL)
 
-        # Enter password only
-        await page.get_by_placeholder("Password").fill("secret_sauce")
+            # Enter password only
+            page.get_by_placeholder("Password").fill("secret_sauce")
 
-        # Click login
-        await page.get_by_role("button", name="Login").click()
+            # Click Login
+            page.get_by_role("button", name="Login").click()
+            page.wait_for_timeout(3000)
+            # Verify username validation
+            error = page.locator('[data-test="error"]')
 
-        # Verify validation error
-        error_message = page.locator('[data-test="error"]')
+            expect(error).to_contain_text("Username is required")
 
-        await expect(error_message).to_contain_text(
-            "Username is required"
-        )
+            print("PASS: Empty username validation")
 
-        await browser.close()
+        finally:
+            browser.close()
+
+
+def test_empty_password():
+
+    with sync_playwright() as playwright:
+
+        browser = playwright.chromium.launch(headless=False)
+        page = browser.new_page()
+
+        try:
+            # Open website
+            page.goto(BASE_URL)
+
+            # Enter username only
+            page.get_by_placeholder("Username").fill("standard_user")
+            page.wait_for_timeout(3000)
+            # Click Login
+            page.get_by_role("button", name="Login").click()
+            page.wait_for_timeout(3000)
+            # Verify password validation
+            error = page.locator('[data-test="error"]')
+
+            expect(error).to_contain_text("Password is required")
+
+            print("PASS: Empty password validation")
+            page.wait_for_timeout(2000)
+        finally:
+            browser.close()
+
+
+def test_logout():
+
+    with sync_playwright() as playwright:
+
+        browser = playwright.chromium.launch(headless=False)
+        page = browser.new_page()
+
+        try:
+            # Open website
+            page.goto(BASE_URL)
+
+            # Login with valid credentials
+            page.get_by_placeholder("Username").fill("standard_user")
+            page.get_by_placeholder("Password").fill("secret_sauce")
+            page.wait_for_timeout(3000)
+            page.get_by_role("button", name="Login").click()
+
+            # Verify login
+            expect(page).to_have_url(re.compile("inventory.html"))
+
+            # Browser interaction method 1: Hover
+            page.locator("#react-burger-menu-btn").hover()
+
+            # Browser interaction method 2: Click
+            page.locator("#react-burger-menu-btn").click()
+
+            # Verify logout link
+            logout_link = page.locator("#logout_sidebar_link")
+            expect(logout_link).to_be_visible()
+
+            # Browser interaction method 3: Click logout
+            logout_link.click()
+            page.wait_for_timeout(3000)
+            # Browser interaction method 4: Keyboard interaction
+            page.keyboard.press("Tab")
+
+            # Verify return to login page
+            expect(page).to_have_url(BASE_URL)
+
+            expect(
+                page.get_by_placeholder("Username")
+            ).to_be_visible()
+
+            expect(
+                page.get_by_placeholder("Password")
+            ).to_be_visible()
+
+            print("PASS: Logout and return to login page")
+
+        finally:
+            browser.close()
+
+
+if __name__ == "__main__":
+
+    pytest_args = [
+        "test_successful_login",
+        "test_invalid_login",
+        "test_empty_username",
+        "test_empty_password",
+        "test_logout"
+    ]
+
+    print("SauceDemo Login Automation Test Cases")
